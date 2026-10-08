@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Jonas Ai">
+  <rect width="32" height="32" rx="8" fill="#14081C"/>
+  <path
+    d="M10.2 7.4h12.2M19.2 7.4v11.6c0 4.5-3.3 7.1-7.6 7.1"
+    fill="none"
+    stroke="#E6C36A"
+    stroke-width="3.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+</svg>
