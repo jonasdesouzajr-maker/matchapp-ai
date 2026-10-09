@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Send, Square, X } from "lucide-react";
 import { FaceStage } from "@/components/living-face";
 import { FACES, type FaceId } from "@/lib/faces";
-import { LINES, PROMPTS, matchLine, type Line, type LineId } from "@/lib/lines";
+import { LINES, PROMPTS, matchLine, speechLanguage, type Line, type LineId } from "@/lib/lines";
 import { readSpeech, type FaceDrive, type Viseme } from "@/lib/speech-drive";
+import { speakCaption } from "@/lib/voice-playback";
 
 type Mode = "ready" | "listening" | "speaking";
 
@@ -161,17 +162,21 @@ export function Companion() {
     const audio = audioRef.current;
     if (!audio) return null;
     if (graphRef.current) return graphRef.current;
-    const ctx = new AudioContext();
-    const source = ctx.createMediaElementSource(audio);
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.35;
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
-    timeRef.current = new Uint8Array(analyser.fftSize);
-    freqRef.current = new Uint8Array(analyser.frequencyBinCount);
-    graphRef.current = { ctx, analyser };
-    return graphRef.current;
+    try {
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.35;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      timeRef.current = new Uint8Array(analyser.fftSize);
+      freqRef.current = new Uint8Array(analyser.frequencyBinCount);
+      graphRef.current = { ctx, analyser };
+      return graphRef.current;
+    } catch {
+      return null;
+    }
   }
 
   function stopPump() {
@@ -206,6 +211,25 @@ export function Companion() {
     heardRef.current = "";
   }
 
+  function waitUntilPlayable(audio: HTMLAudioElement) {
+    if (audio.readyState >= 2) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const done = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        audio.removeEventListener("canplay", onReady);
+        audio.removeEventListener("error", onBad);
+        resolve(ok);
+      };
+      const onReady = () => done(true);
+      const onBad = () => done(false);
+      audio.addEventListener("canplay", onReady);
+      audio.addEventListener("error", onBad);
+      window.setTimeout(() => done(audio.readyState >= 2), 2500);
+    });
+  }
+
   function speak(persona: FaceId, id: LineId) {
     const audio = audioRef.current;
     if (!audio) return Promise.resolve();
@@ -214,8 +238,10 @@ export function Companion() {
     const token = tokenRef.current;
     const next = LINES[persona][id];
     audio.onended = null;
+    audio.onerror = null;
     audio.pause();
     stopPump();
+    window.speechSynthesis?.cancel();
     setSpeaker(persona);
     setLine(next);
     setMicNote("");
@@ -231,15 +257,40 @@ export function Companion() {
         setModeBoth("ready");
         resolve();
       };
-      audio.onended = finish;
-      audio.onerror = finish;
-      const graph = ensureGraph();
-      if (graph && graph.ctx.state === "suspended") void graph.ctx.resume();
-      audio.src = next.audio;
-      holdRef.current = { viseme: "rest", at: performance.now() };
-      const played = audio.play();
-      pump(token, persona);
-      void played.catch(() => finish());
+      const run = async () => {
+        const graph = ensureGraph();
+        if (graph && graph.ctx.state !== "running") {
+          try {
+            await graph.ctx.resume();
+          } catch {
+            /* clip can still play if the element was not captured */
+          }
+        }
+        if (token !== tokenRef.current) return finish();
+        audio.src = next.audio;
+        audio.load();
+        holdRef.current = { viseme: "rest", at: performance.now() };
+        const ready = await waitUntilPlayable(audio);
+        if (token !== tokenRef.current) return finish();
+        if (ready) {
+          try {
+            await audio.play();
+            if (token !== tokenRef.current) return finish();
+            audio.onended = finish;
+            audio.onerror = finish;
+            pump(token, persona);
+            return;
+          } catch {
+            /* fall through to the browser voice */
+          }
+        }
+        if (token !== tokenRef.current) return finish();
+        const lang = speechLanguage(navigator.language);
+        pump(token, persona);
+        await speakCaption(next.caption, persona, lang);
+        finish();
+      };
+      void run().catch(() => finish());
     });
   }
 
@@ -271,7 +322,7 @@ export function Companion() {
       return;
     }
     const rec = new Ctor();
-    rec.lang = "en-US";
+    rec.lang = speechLanguage(navigator.language);
     rec.interimResults = true;
     rec.continuous = false;
     answeredRef.current = false;
@@ -437,7 +488,7 @@ export function Companion() {
 
   return (
     <main className="stage">
-      <audio ref={audioRef} preload="auto" />
+      <audio ref={audioRef} preload="none" playsInline />
       <div className="home">
         <header className="home-bar">
           <div className="brand">
@@ -484,7 +535,7 @@ export function Companion() {
             ref={bubbleRef}
             type="button"
             className={bubbleClass}
-            onPointerUp={onFace}
+           
             onClick={onFace}
             aria-pressed={awake}
             aria-label={open ? (awake ? `${face.name} is awake. Tap to listen.` : `Wake ${face.name}`) : `Open ${face.name}`}
@@ -534,13 +585,13 @@ export function Companion() {
                 {micNote ? <span className="mic-note">{micNote}</span> : null}
               </p>
             )}
-            <button type="button" className={mode === "listening" ? "gold is-hear" : "gold"} onPointerUp={onPrimary} onClick={onPrimary}>
+            <button type="button" className={mode === "listening" ? "gold is-hear" : "gold"} onClick={onPrimary}>
               {mode === "speaking" ? <Square className="btn-ico" size={16} /> : <Mic className="btn-ico" size={18} />}
               {primaryLabel}
             </button>
             <div className="chips">
               {PROMPTS.map((prompt) => (
-                <button key={prompt.id} type="button" className="chip" onPointerUp={() => playPrompt(prompt.id)} onClick={() => playPrompt(prompt.id)}>
+                <button key={prompt.id} type="button" className="chip" onClick={() => playPrompt(prompt.id)}>
                   {prompt.label}
                 </button>
               ))}
