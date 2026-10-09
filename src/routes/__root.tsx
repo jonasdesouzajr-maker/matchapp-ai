@@ -9,7 +9,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "MatchApp Ai" },
-      { name: "description", content: "Tap Jonas or Aureya. They wake, say hello, and listen." },
+      { name: "description", content: "Tap Jonas to wake your persistent MatchApp Ai companion." },
       { name: "theme-color", content: "#100814" },
     ],
     links: [

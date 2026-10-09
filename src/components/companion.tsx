@@ -116,7 +116,7 @@ export function Companion() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(PERSONA_KEY);
-      if (saved === "jonas" || saved === "aureya") {
+      if (saved === "jonas") {
         whoRef.current = saved;
         setWho(saved);
       }
@@ -555,20 +555,6 @@ export function Companion() {
                 <FadingName name={face.name} live={booted} />
               </div>
             </header>
-            <div className="switch" data-who={who} role="group" aria-label="Choose companion">
-              <span className="switch-thumb" aria-hidden="true" />
-              {(["jonas", "aureya"] as const).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={who === id ? "is-picked" : ""}
-                  aria-pressed={who === id}
-                  onClick={() => pick(id)}
-                >
-                  {FACES[id].name}
-                </button>
-              ))}
-            </div>
             {mode === "listening" || line ? (
               <p className={mode === "speaking" ? "said" : "said is-quiet"} aria-live="polite">
                 <span className="caption-who">
@@ -581,7 +567,7 @@ export function Companion() {
               <p className="tap-hint">
                 {awake
                   ? `${face.name} is with you. Tap the face to listen, or type below.`
-                  : `Tap ${face.name}’s face. ${who === "jonas" ? "He" : "She"}’ll say hello, then listen.`}
+                  : `Tap ${face.name}’s face. ${"He"}’ll say hello, then listen.`}
                 {micNote ? <span className="mic-note">{micNote}</span> : null}
               </p>
             )}

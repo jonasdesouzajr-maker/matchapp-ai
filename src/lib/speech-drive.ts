@@ -3,7 +3,7 @@ import type { MouthShape } from "@/lib/faces";
 export type Viseme = "rest" | MouthShape;
 
 export type FaceDrive = {
-  speaker: "jonas" | "aureya" | null;
+  speaker: "jonas" | null;
   env: number;
   viseme: Viseme;
 };

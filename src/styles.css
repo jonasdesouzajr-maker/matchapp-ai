@@ -512,10 +512,6 @@
   transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.switch[data-who="aureya"] .switch-thumb {
-  transform: translateX(calc(100% + 0.3rem));
-}
-
 .switch button {
   position: relative;
   z-index: 1;

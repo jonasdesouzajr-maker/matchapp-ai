@@ -1,4 +1,4 @@
-export type FaceId = "jonas" | "aureya";
+export type FaceId = "jonas";
 export type MouthShape = "aa" | "oh" | "ee";
 
 export type Ellipse = { x: number; y: number; rx: number; ry: number };
@@ -9,7 +9,7 @@ export type FaceSpec = {
   role: string;
   /** Normalized Y that should sit in the middle of the circle. */
   focus: number;
-  /** Offsets blinks, breath, and smiles so the two faces never move in lockstep. */
+  /** Offsets blinks, breath, and smiles for natural movement. */
   phase: number;
   firstBlink: number;
   firstSmile: number;
@@ -56,33 +56,5 @@ export const FACES: Record<FaceId, FaceSpec> = {
     },
     smile: { x: 0.51, y: 0.556, rx: 0.1, ry: 0.024 },
     lip: { x: 0.508, y: 0.557, half: 0.095 },
-  },
-  aureya: {
-    id: "aureya",
-    name: "Aureya",
-    role: "Soft alto",
-    focus: 0.41,
-    phase: 1700,
-    firstBlink: 1400,
-    firstSmile: 900,
-    plates: {
-      rest: "/faces/aureya/rest.jpg",
-      blink: "/faces/aureya/blink.jpg?v=2",
-      smile: "/faces/aureya/smile.jpg",
-      aa: "/faces/aureya/aa.jpg",
-      oh: "/faces/aureya/oh.jpg",
-      ee: "/faces/aureya/ee.jpg",
-    },
-    eyes: [
-      { x: 0.39, y: 0.348, rx: 0.072, ry: 0.048 },
-      { x: 0.614, y: 0.348, rx: 0.072, ry: 0.048 },
-    ],
-    mouths: {
-      aa: { x: 0.5, y: 0.468, rx: 0.1, ry: 0.042 },
-      oh: { x: 0.5, y: 0.458, rx: 0.09, ry: 0.038 },
-      ee: { x: 0.5, y: 0.452, rx: 0.11, ry: 0.032 },
-    },
-    smile: { x: 0.5, y: 0.458, rx: 0.15, ry: 0.055 },
-    lip: { x: 0.5, y: 0.515, half: 0.09 },
-  },
+  }
 };

@@ -41,40 +41,7 @@ const jonas: Record<LineId, Line> = {
   },
 };
 
-const aureya: Record<LineId, Line> = {
-  greet: {
-    id: "greet",
-    audio: "/voice/aureya/greet.mp3?v=hello",
-    caption: "Hello, I'm Aureya, your brand new AI here on MatchApp. What can I help you with today?",
-  },
-  feelgood: {
-    id: "feelgood",
-    audio: "/voice/aureya/feelgood.mp3",
-    caption: "If you want something tender, try Past Lives. Quiet, glowing, and it stays with you.",
-  },
-  sports: {
-    id: "sports",
-    audio: "/voice/aureya/sports.mp3",
-    caption: "If the room wants energy, put a live match on. I’ll keep the moments close.",
-  },
-  anime: {
-    id: "anime",
-    audio: "/voice/aureya/anime.mp3",
-    caption: "For anime tonight, try Frieren. Slow, kind, and beautiful to sit with.",
-  },
-  where: {
-    id: "where",
-    audio: "/voice/aureya/where.mp3",
-    caption: "Name the title. I’ll tell you which service actually has it.",
-  },
-  fallback: {
-    id: "fallback",
-    audio: "/voice/aureya/fallback.mp3",
-    caption: "I’m here. A mood, a platform, or a title is enough.",
-  },
-};
-
-export const LINES: Record<FaceId, Record<LineId, Line>> = { jonas, aureya };
+export const LINES: Record<FaceId, Record<LineId, Line>> = { jonas };
 
 export const PROMPTS: { label: string; id: LineId }[] = [
   { label: "Something warm", id: "feelgood" },
