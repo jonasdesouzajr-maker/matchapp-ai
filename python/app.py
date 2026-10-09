@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MatchApp AI — local immersive companion.
+"""MatchApp Ai — local immersive companion.
 
 No packages to install. From this folder:
 
@@ -43,7 +43,7 @@ def free_port(preferred: int) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run MatchApp AI locally.")
+    parser = argparse.ArgumentParser(description="Run MatchApp Ai locally.")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
@@ -56,7 +56,7 @@ def main() -> int:
     handler = partial(QuietHandler, directory=str(WEB))
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
     url = f"http://127.0.0.1:{port}/"
-    print(f"MatchApp AI is on {url}")
+    print(f"MatchApp Ai is on {url}")
     print("Ctrl+C to stop.")
 
     if not args.no_browser:

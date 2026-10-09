@@ -3,15 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>MatchApp AI</title>
+  <title>MatchApp Ai | Immersive Python Preview</title>
   <meta name="theme-color" content="#100814" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="polish.css" />
 </head>
 <body>
   <div class="world">
+    <header class="app-head"><div class="app-brand"><span class="app-symbol" aria-hidden="true">✦</span><span>MatchApp <em>Ai</em></span></div><span class="preview-mark">Python · local preview</span></header>
     <div class="stage" id="stage">
       <div class="screen">
         <div class="portrait-wrap">
@@ -26,7 +28,7 @@
             <div class="fade"></div>
             <div class="lockup">
               <div>
-                <div class="kicker">MatchApp AI</div>
+                <div class="kicker">MatchApp Ai</div>
                 <h1 id="name">Jonas</h1>
                 <p id="role">Warm baritone</p>
               </div>
@@ -67,7 +69,9 @@
       </div>
     </div>
   </div>
+  <button type="button" class="mini-dock" id="mini-dock" aria-label="Return to companion" hidden><img src="faces/jonas/rest.jpg" alt="" /><span><strong>Jonas</strong><small>Waiting</small></span></button>
   <audio id="voice" preload="none" playsinline></audio>
   <script src="app.js"></script>
+  <script src="polish.js"></script>
 </body>
 </html>
