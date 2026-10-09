@@ -84,12 +84,25 @@ export const PROMPTS: { label: string; id: LineId }[] = [
 ];
 
 export function matchLine(input: string): LineId {
-  const q = input.toLowerCase().trim();
+  const q = input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .trim();
   if (!q) return "fallback";
-  if (/anime|manga|ghibli|frieren|spy x/.test(q)) return "anime";
-  if (/\b(sport|sports|futebol|football|soccer)\b|\blive\b/.test(q)) return "sports";
-  if (/\bwhere\b|which (app|service|platform)|netflix|streaming/.test(q)) return "where";
-  if (/\b(warm|cozy|feel-good|feel good|comedy|funny|gentle|comfort)\b/.test(q)) return "feelgood";
-  if (/^(hi|hello|hey|oi|who are you)[!.?\s]*$/.test(q)) return "greet";
+  if (/anime|manga|ghibli|frieren|spy x|shonen|shounen/.test(q)) return "anime";
+  if (/\b(sport|sports|futebol|football|soccer|jogo|partida|campeonato)\b|\b(live|ao vivo)\b/.test(q)) return "sports";
+  if (/\b(where|onde)\b|which (app|service|platform)|netflix|streaming|assistir|onde passa|qual (app|servico|plataforma)/.test(q)) return "where";
+  if (/\b(warm|cozy|feel-good|feel good|comedy|funny|gentle|comfort|quente|aconchegante|comedia|engracado|leve|confort)\b/.test(q)) return "feelgood";
+  if (/^(hi|hello|hey|oi|ola|e ai|bom dia|boa tarde|boa noite)[!.?,\s]*$/.test(q)) return "greet";
+  if (/\b(who are you|quem e voce)\b/.test(q) && q.length < 48) return "greet";
   return "fallback";
+}
+
+/** Browser speech language. Portuguese listeners should not be forced into en-US. */
+export function speechLanguage(locale = ""): string {
+  const lang = (locale || "en-US").toLowerCase();
+  if (lang.startsWith("pt")) return "pt-BR";
+  if (lang.startsWith("es")) return "es-ES";
+  return locale || "en-US";
 }
