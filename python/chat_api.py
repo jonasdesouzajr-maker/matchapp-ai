@@ -72,7 +72,7 @@ def run_chat(messages, language):
     chosen = provider()
     if not chosen:
         return HTTPStatus.SERVICE_UNAVAILABLE, {
-            "error": "AI is not configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY on your laptop.",
+            "error": "Jonas's conversation service isn't connected yet. Please try again shortly.",
             "configured": False,
         }
     key, endpoint, model = chosen

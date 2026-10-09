@@ -167,7 +167,10 @@
     } finally {
       clearTimeout(timeout);
       busy = false; sendButton.disabled = false; controller = null;
-      input.focus({ preventScroll: true });
+      // Do not unexpectedly open the phone's software keyboard after replies/errors.
+      if (open && !document.hidden && window.matchMedia('(pointer: fine)').matches) {
+        input.focus({ preventScroll: true });
+      }
     }
   }
   function startListening() {
@@ -177,8 +180,10 @@
       setMicGlyph(false); uiStatus("Ready when you are");
       return;
     }
+    // Android WebView can expose a SpeechRecognition shim that cannot actually listen.
+    // Prefer the Kotlin bridge when available, regardless of browser API presence.
     const Engine = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Engine && window.MatchAppNativeVoice?.start) {
+    if (window.MatchAppNativeVoice?.start) {
       if (speaking) stopVoice();
       listening = true; recording = null;
       bubble.classList.add("is-listening");

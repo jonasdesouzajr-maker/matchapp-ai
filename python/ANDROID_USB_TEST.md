@@ -3,25 +3,28 @@
 Development preview only. Not a Play Store release.
 
 ## Verified
-- Python server serves the local preview and its assets.
-- Seven Python chat API tests passed; TypeScript typecheck and tests passed.
-- Debug Android APK builds and installs separately from production.
-- Galaxy S23 Ultra: Home/Discover navigation, draggable persistent bubble, chat opening, and typed request submission work.
-- No provider API key is present in the Python server environment. The API returns an explicit 503 configuration error.
-- Android WebView lacks browser microphone transcription. A restricted native Android recognition bridge was built afterward but is not yet device-verified because USB disconnected.
+- Local Python server serves the Jonas companion UI and assets.
+- All seven Python API contract tests pass. TypeScript typecheck and existing repository tests passed.
+- Android V45 debug APK builds, verifies its signature, and installs separately from the production app.
+- Galaxy S23 Ultra: Home/Discover navigation, persistent draggable bubble, chat opening, and typed requests were exercised.
+- A one-time Android microphone permission prompt appeared; native recognition started, and the no-speech fallback returned control without a crash. Actual spoken-word transcription and speech output are not yet verified.
+- Four browser regression runs passed at 390, 412, 768 and 1365 CSS pixels without detected horizontal overflow or JavaScript errors. Navigation, dragging, chat and error response checks all passed.
+- The local Python server is not configured with an AI provider key; the app shows an informative offline message instead of fabricated answers.
 
-## Run
-1. On laptop: python app.py --port 8877 --no-browser
-2. Connect and authorize the phone for ADB.
-3. Run: adb reverse tcp:8877 tcp:8877
-4. Install the debug APK separately (package com.jonas.papercup.debug).
-5. Test-launch with: adb shell am start -n com.jonas.papercup.debug/com.jonas.papercup.MainActivity --es matchapp_smoke_url http://127.0.0.1:8877/
+## Run the USB preview
+1. On the laptop, launch python app.py --port 8877 --no-browser from the python directory.
+2. Connect and authorize the Galaxy phone for ADB.
+3. Execute: adb reverse tcp:8877 tcp:8877
+4. Install the APK in Downloads (debug package com.jonas.papercup.debug).
+5. Execute: adb shell am start -n com.jonas.papercup.debug/com.jonas.papercup.MainActivity --es matchapp_smoke_url http://127.0.0.1:8877/
 
-## Pending before production
-- Configure an authenticated production AI endpoint and streaming catalog with quota checks.
-- Set OPENROUTER_API_KEY or OPENAI_API_KEY in the server process environment; do not put credentials in JavaScript or APKs.
-- Test microphone consent, native speech-to-text and text-to-speech on device.
-- Build a standalone Android release linked to a hosted backend. The USB Python server is not a deployable production backend.
-- Verify Play signing, privacy, subscriptions and release date after acceptance. Do not invent the launch date.
+The Downloads directory also contains Install-MatchApp-Ai-Jonas-USB-Test.bat, which performs the USB setup and launches the debug app.
 
-The AI context knows the creator was born October 10, 1986 and turns 40 on October 10, 2026.
+## Blockers before production
+- Connect the new interface to the existing JWT-protected Supabase gemini-proxy using authenticated user sessions and credit/quota enforcement. Never bypass the existing authentication checks or embed secret keys in the APK.
+- Connect the full MatchApp Ai catalog and verify country-specific streaming results.
+- Verify genuine spoken-word recognition, native text-to-speech, accessibility and device coverage.
+- Deploy a secure hosted backend and build an independent signed release APK/AAB. The localhost Python server is a test scaffold only.
+- Complete privacy, billing, Play Store listing, release-signing, and staged rollout reviews.
+
+Jonas knows that his creator was born on October 10, 1986 and turns 40 on October 10, 2026. The official Play Store launch date must be recorded only when verified; none has been invented.
