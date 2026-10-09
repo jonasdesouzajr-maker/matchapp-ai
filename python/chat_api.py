@@ -68,7 +68,49 @@ def clean_messages(raw):
     return messages
 
 
+def matchapp_provider_configured():
+    return bool(os.environ.get("MATCHAPP_SUPABASE_ANON_KEY", "").strip())
+
+
+def run_matchapp_chat(messages, language):
+    """Use the existing metered MatchApp Ai Supabase Edge Function, not a new paid account."""
+    key = os.environ["MATCHAPP_SUPABASE_ANON_KEY"].strip()
+    endpoint = "https://zkymvqrmbabngsqblyye.supabase.co/functions/v1/gemini-proxy"
+    history = [{"role": row["role"], "text": row["content"][:600]} for row in messages[:-1]][-8:]
+    payload = json.dumps({
+        "mode": "discover", "persona": "Jonas", "kidsMode": False,
+        "question": messages[-1]["content"][:600],
+        "history": history,
+        "lang": str(language or "en-US")[:8],
+        "country": "",
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint, data=payload, method="POST",
+        headers={"Authorization": f"Bearer {key}", "apikey": key,
+                 "Content-Type": "application/json", "User-Agent": "MatchApp-Ai-Python-Preview/1.1"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=68) as response:
+            result = json.load(response)
+        raw = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+        parsed = json.loads(raw)
+        reply = parsed.get("answer", "")
+        if not isinstance(reply, str) or not reply.strip():
+            raise ValueError("Empty response from AI service")
+        return HTTPStatus.OK, {"reply": reply.strip(), "provider": "matchapp"}
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            return HTTPStatus.TOO_MANY_REQUESTS, {"error": "Jonas is getting many questions right now. Please try again shortly."}
+        if exc.code in (401, 403):
+            return HTTPStatus.SERVICE_UNAVAILABLE, {"error": "Jonas's AI access needs to be refreshed. Please try again shortly."}
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
+        pass
+    return HTTPStatus.BAD_GATEWAY, {"error": "Jonas cannot reach the conversation service right now. Please retry shortly."}
+
+
 def run_chat(messages, language):
+    if matchapp_provider_configured():
+        return run_matchapp_chat(messages, language)
     chosen = provider()
     if not chosen:
         return HTTPStatus.SERVICE_UNAVAILABLE, {

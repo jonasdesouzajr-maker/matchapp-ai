@@ -6,5 +6,6 @@ dist
 attachments
 screenshots
 artifacts
+python/.preview.local.json
 .env
 .env.*

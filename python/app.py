@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import socket
 import sys
 import threading
@@ -13,10 +14,24 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from chat_api import provider, respond
+from chat_api import provider, respond, matchapp_provider_configured
 
 ROOT = Path(__file__).resolve().parent
 WEB = ROOT / "web"
+
+
+def load_local_preview_config() -> None:
+    """Read the ignored local *public anon* configuration, never commit credentials."""
+    path = ROOT / ".preview.local.json"
+    if not path.exists():
+        return
+    try:
+        values = json.loads(path.read_text(encoding="utf-8"))
+        for key in ("MATCHAPP_SUPABASE_ANON_KEY",):
+            if isinstance(values.get(key), str) and values[key].strip():
+                os.environ.setdefault(key, values[key].strip())
+    except (ValueError, OSError):
+        print("Local preview configuration could not be loaded.", file=sys.stderr)
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -46,7 +61,7 @@ class QuietHandler(SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.FORBIDDEN)
             return
         if self.path == "/api/health":
-            self.send_json(HTTPStatus.OK, {"service": "jonas", "chat_configured": bool(provider()),
+            self.send_json(HTTPStatus.OK, {"service": "jonas", "chat_configured": bool(provider()) or matchapp_provider_configured(),
                                            "mode": "local-preview"})
             return
         if self.path.startswith("/api/"):
@@ -77,6 +92,7 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8899)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
+    load_local_preview_config()
     if not (WEB / "index.html").is_file():
         print("Missing web/index.html.", file=sys.stderr)
         return 1
@@ -85,7 +101,7 @@ def main() -> int:
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
     url = f"http://127.0.0.1:{port}/"
     print(f"MatchApp Ai on {url}", flush=True)
-    print("AI provider: configured" if provider() else "AI provider: not configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)", flush=True)
+    print("AI provider: configured" if (provider() or matchapp_provider_configured()) else "AI provider: not configured", flush=True)
     if not args.no_browser:
         threading.Timer(0.4, lambda: webbrowser.open(url)).start()
     try:

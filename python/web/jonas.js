@@ -12,6 +12,49 @@
   let audioAnimation = null, blinkClock = null, drag = null, ignoreClick = false;
   const shapes = ["aa", "oh", "ee", "rest"];
   const birthday = "October 10";
+  // Double-buffered facial frames for smooth crossfades: never flash empty images.
+  const avatarPairs = [
+    [face, $("bubble-expression")],
+    [$("hero-face"), $("hero-expression")],
+  ];
+  let activeFrame = 0;
+  let faceFrame = "rest";
+  const preload = new Map();
+  for (const mood of ["rest", "blink", "smile", "aa", "oh", "ee"]) {
+    const frame = new Image();
+    frame.decoding = "async";
+    frame.src = "faces/jonas/" + mood + ".jpg";
+    preload.set(mood, frame);
+  }
+  function setExpression(name) {
+    if (document.hidden || !preload.has(name) || faceFrame === name) return;
+    faceFrame = name;
+    activeFrame = 1 - activeFrame;
+    const filename = preload.get(name).src;
+    for (const pair of avatarPairs) {
+      const incoming = pair[activeFrame], outgoing = pair[1-activeFrame];
+      if (!incoming || !outgoing) continue;
+      incoming.src = filename;
+      incoming.style.opacity = "1";
+      outgoing.style.opacity = "0";
+    }
+  }
+  const heroArt = document.querySelector(".hero-art");
+  if (heroArt && window.matchMedia("(pointer: fine)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    heroArt.addEventListener("pointermove", (event) => {
+      const rect = heroArt.getBoundingClientRect();
+      const x = ((event.clientX-rect.left)/rect.width-.5)*2;
+      const y = ((event.clientY-rect.top)/rect.height-.5)*2;
+      heroArt.style.setProperty("--head-x", (-y*3).toFixed(2)+"deg");
+      heroArt.style.setProperty("--head-y", (x*5).toFixed(2)+"deg");
+    }, { passive:true });
+    heroArt.addEventListener("pointerleave", () => {
+      heroArt.style.setProperty("--head-x","0deg");
+      heroArt.style.setProperty("--head-y","0deg");
+    });
+  }
+
   function setMicGlyph(active) {
     if (active) { micButton.textContent = "■"; return; }
     micButton.innerHTML = "<svg aria-hidden='true' viewBox='0 0 24 24' width='22' height='22' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='2' width='6' height='12' rx='3'/><path d='M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8'/></svg>";
@@ -76,7 +119,7 @@
     speaking = false;
     bubble.classList.remove("is-speaking");
     clearInterval(audioAnimation); audioAnimation = null;
-    face.src = "faces/jonas/rest.jpg";
+    setExpression("rest");
     try { speechSynthesis.cancel(); } catch {}
     try { window.MatchAppNativeVoice?.stopSpeaking(); } catch {}
     if (listening) {
@@ -95,13 +138,13 @@
       speaking = true; bubble.classList.add("is-speaking"); uiStatus("Jonas is speaking…");
       let step = 0;
       audioAnimation = setInterval(() => {
-        if (speaking && mine === epoch) face.src = "faces/jonas/" + shapes[(step++) % shapes.length] + ".jpg";
+        if (speaking && mine === epoch) setExpression(shapes[(step++) % shapes.length]);
       }, 130);
       const finish = () => {
         if (mine !== epoch) return;
         speaking = false; bubble.classList.remove("is-speaking");
         clearInterval(audioAnimation); audioAnimation = null;
-        face.src = "faces/jonas/rest.jpg"; uiStatus("Ready when you are");
+        setExpression("rest"); uiStatus("Ready when you are");
       };
       window.matchAppNativeSpeechState = (active) => { if (!active) finish(); };
       document.addEventListener("matchapp:avatar-voice-unavailable", finish, { once: true });
@@ -126,13 +169,62 @@
       if (myEpoch !== epoch) return;
       speaking = false; bubble.classList.remove("is-speaking");
       clearInterval(audioAnimation); audioAnimation = null;
-      face.src = "faces/jonas/rest.jpg"; uiStatus("Ready when you are");
+      setExpression("rest"); uiStatus("Ready when you are");
     };
     utter.onend = done; utter.onerror = done;
     speaking = true; bubble.classList.add("is-speaking"); uiStatus("Jonas is speaking…");
     let i = 0;
-    audioAnimation = setInterval(() => { if (speaking) face.src = "faces/jonas/" + shapes[(i++) % shapes.length] + ".jpg"; }, 125);
+    audioAnimation = setInterval(() => { if (speaking) setExpression(shapes[(i++) % shapes.length]); }, 125);
     speechSynthesis.speak(utter);
+  }
+  // Production secrets never live here. The preview Android native bridge talks
+  // to the already-metered MatchApp Ai Edge Function using a public anon JWT.
+  let pendingNative = null;
+  window.matchAppNativeAiResult = (id, reply, error) => {
+    if (!pendingNative || pendingNative.id !== String(id)) return;
+    const current = pendingNative;
+    pendingNative = null;
+    if (error) current.reject(new Error(String(error)));
+    else current.resolve({ reply: String(reply || "") });
+  };
+  function askPackagedAI(messages, locale, signal) {
+    return new Promise((resolve, reject) => {
+      const id = "m" + Date.now().toString(36) + Math.floor(Math.random()*100000).toString(36);
+      if (pendingNative) {
+        reject(new Error("Please wait for Jonas to finish answering."));
+        return;
+      }
+      pendingNative = { id, resolve, reject };
+      const rejectIfAborted = () => {
+        if (pendingNative?.id !== id) return;
+        pendingNative = null;
+        reject(new DOMException("Request timed out", "AbortError"));
+      };
+      signal.addEventListener("abort", rejectIfAborted, {once:true});
+      try {
+        window.MatchAppNativeAI.ask(JSON.stringify({id, messages, locale}));
+      } catch {
+        pendingNative = null;
+        reject(new Error("Jonas could not reach the native AI service."));
+      }
+    });
+  }
+  // Verified avatar metadata. The Play launch date remains unknown until published.
+  function avatarIdentityAnswer(question) {
+    const q = String(question || "");
+    const birthday = /(your|jonas.s|seu|do jonas).{0,55}(birthday|anivers[aá]rio|date of birth|nascimento)|quando (voc[eê]|jonas) nasceu/i.test(q);
+    const creator = /(creator|criador).{0,55}(birthday|anivers[aá]rio|born|nasceu|nascimento)/i.test(q);
+    const launch = /(your|jonas.s|app|matchapp ai|google play|official).{0,70}(launch|release|publication|released|published|lan[çc]amento|estreia|publica[çc][aã]o)|(data do lan[çc]amento|quando (o app|jonas) (foi )?lan[çc]ado)/i.test(q);
+    if (!birthday && !creator && !launch) return null;
+    const pt = voiceLanguage().toLowerCase().startsWith("pt");
+    const parts = [];
+    if (birthday || creator) parts.push(pt
+      ? "Meu aniversário simbólico é 10 de outubro. Meu criador nasceu em 10 de outubro de 1986 e completa 40 anos em 10 de outubro de 2026."
+      : "My symbolic birthday is October 10. My creator was born October 10, 1986, and turns 40 on October 10, 2026.");
+    if (launch) parts.push(pt
+      ? "Minha data oficial de lançamento no Google Play ainda não foi confirmada; só vou informar a data real após a publicação."
+      : "My official Google Play launch date is not confirmed yet; I'll give the verified date after publication.");
+    return parts.join(" ");
   }
   async function send(message) {
     const text = String(message || "").trim().slice(0, 2000);
@@ -142,17 +234,33 @@
     addEntry("user", text);
     messageHistory.push({ role: "user", content: text });
     messageHistory = messageHistory.slice(-12);
+    const verifiedIdentity = avatarIdentityAnswer(text);
+    if (verifiedIdentity) {
+      messageHistory.push({ role: "assistant", content: verifiedIdentity });
+      messageHistory = messageHistory.slice(-12);
+      lastReply = verifiedIdentity;
+      addEntry("assistant", verifiedIdentity);
+      useVoice(verifiedIdentity);
+      return;
+    }
     busy = true; sendButton.disabled = true;
     uiStatus("Thinking…");
     const ctrl = new AbortController(); controller = ctrl;
-    const timeout = setTimeout(() => ctrl.abort(), 22000);
+    // MatchApp AI's existing model fallbacks can need up to 60 seconds under load.
+    const timeout = setTimeout(() => ctrl.abort(), 75000);
     try {
-      const response = await fetch("/api/ask", {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({ messages: messageHistory, locale: voiceLanguage() })
-      });
-      const data = await response.json();
-      if (!response.ok || !data.reply) throw new Error(data.error || "Jonas is unavailable.");
+      let data;
+      if (window.MatchAppNativeAI && typeof window.MatchAppNativeAI.ask === "function") {
+        data = await askPackagedAI(messageHistory, voiceLanguage(), ctrl.signal);
+      } else {
+        const response = await fetch("/api/ask", {
+          method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
+          body: JSON.stringify({ messages: messageHistory, locale: voiceLanguage() })
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Jonas is unavailable.");
+      }
+      if (!data.reply) throw new Error(data.error || "Jonas is unavailable.");
       const reply = String(data.reply).slice(0, 7000);
       messageHistory.push({ role: "assistant", content: reply.slice(0, 2000) });
       messageHistory = messageHistory.slice(-12);
@@ -242,7 +350,16 @@
     if (controller) controller.abort();
     stopVoice(); bubble.focus({ preventScroll: true });
   }
-  function toggleChat() { if (open) hideChat(); else showChat(); }
+  function toggleChat() {
+    if (open) hideChat();
+    else {
+      showChat();
+      if (!speaking && !listening) {
+        setExpression("smile");
+        setTimeout(() => { if (!speaking && !listening) setExpression("rest"); }, 480);
+      }
+    }
+  }
   function clampPosition(left, top) {
     const w = bubble.offsetWidth, h = bubble.offsetHeight;
     return {
@@ -296,8 +413,8 @@
   });
   blinkClock = setInterval(() => {
     if (speaking || listening) return;
-    face.src = "faces/jonas/blink.jpg";
-    setTimeout(() => { if (!speaking && !listening) face.src = "faces/jonas/rest.jpg"; }, 140);
+    setExpression("blink");
+    setTimeout(() => { if (!speaking && !listening) setExpression("rest"); }, 140);
   }, 3900);
 
   // Native Android WebView speech callback. Only the trusted debug localhost

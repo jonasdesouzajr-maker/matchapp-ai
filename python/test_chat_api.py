@@ -1,4 +1,7 @@
 """Offline contract tests: no AI credentials or network calls required."""
+import io
+import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -33,6 +36,17 @@ class JonasChatTests(unittest.TestCase):
             status, result = chat_api.run_chat([{"role": "user", "content": "Hi"}], "en-US")
             self.assertEqual(int(status), 503)
             self.assertFalse(result["configured"])
+
+    def test_existing_metered_edge_proxy_parses_real_response_format(self):
+        sample = {"candidates": [{"content": {"parts": [{"text": json.dumps({"answer": "Olá, sou Jonas.", "results": []})}]}}]}
+        with patch.dict(os.environ, {"MATCHAPP_SUPABASE_ANON_KEY": "test-public-jwt"}), \
+             patch("urllib.request.urlopen", return_value=io.BytesIO(json.dumps(sample).encode("utf-8"))) as mocked:
+            status, result = chat_api.run_chat([{"role": "user", "content": "Quem é você?"}], "pt-BR")
+            self.assertEqual(int(status), 200)
+            self.assertEqual(result["reply"], "Olá, sou Jonas.")
+            request = mocked.call_args.args[0]
+            self.assertEqual(json.loads(request.data)["persona"], "Jonas")
+            self.assertIn("gemini-proxy", request.full_url)
 
     def test_rate_limit_is_bounded(self):
         key = "test-client"
