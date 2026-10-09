@@ -28,3 +28,12 @@ The Downloads directory also contains Install-MatchApp-Ai-Jonas-USB-Test.bat, wh
 - Complete privacy, billing, Play Store listing, release-signing, and staged rollout reviews.
 
 Jonas knows that his creator was born on October 10, 1986 and turns 40 on October 10, 2026. The official Play Store launch date must be recorded only when verified; none has been invented.
+
+## Reinstallation QA (9 October 2026)
+- Reinstalled signed v45 (1.1.41-debug) on a Samsung Galaxy S23 Ultra and verified launcher-icon startup into the Python preview over USB reverse on 8877.
+- Android WebView native regression: 8 checks passed, 0 failed, 0 uncaught page errors; verified navigation, persistent draggable bubble, chat, clear offline message, native voice bridge callbacks.
+- Responsive regression: all 4 test widths passed (390/412/768/1365); Python API contract suite: 7/7 passed.
+- The old styles.css 404 was removed from HTML and all referenced local assets checked successfully.
+- Live model replies, streaming accuracy and spoken transcription have NOT passed end-to-end due to missing preview-provider credentials/production auth connection.
+- TTS callback events indicate speech started and finished, but acoustic audibility/voice quality were not verified.
+- This APK still requires a running laptop server and ADB reverse; it is NOT an independent production app.
